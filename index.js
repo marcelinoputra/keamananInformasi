@@ -4,8 +4,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
-import sizeOf from 'image-size';
-import ExifParser from 'exif-parser';
+import exifr from 'exifr';
 
 const __filename = new URL(import.meta.url).pathname;
 const __dirname = path.dirname(__filename);
@@ -27,7 +26,7 @@ app.get('/', (req, res) => {
     res.render('main');
 });
 
-app.post('/upload', upload.single('file'), (req, res) => {
+app.post('/upload', upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).send('No files were uploaded.');
     }
@@ -39,37 +38,24 @@ app.post('/upload', upload.single('file'), (req, res) => {
     // Read file buffer
     const buffer = Buffer.from(file.buffer);
 
-    // Extract EXIF data
-    const exifData = extractExifData(buffer);
+    // Read metadata using exifr
+    const metadata = await readMetadata(buffer);
 
-    // Get image dimensions and additional metadata
-    const dimensions = sizeOf(buffer); // Extracts width and height
-    
-    const metadata = {
-        filename: file.originalname,
-        mimetype: file.mimetype,
-        size: file.size,
-        encoding: file.encoding,   // Additional metadata
-        fieldname: file.fieldname, // Additional metadata
-        // Add more properties as needed
-        width: dimensions.width, // Additional metadata
-        height: dimensions.height, // Additional metadata
-        author: exifData.Author || 'Unknown Author' // Additional metadata
-         // Additional metadata
-    };
+    // Display metadata on the console (for testing purposes)
     console.log(metadata);
+
     // Encrypt file metadata using RSA
     const privateKey = crypto.createPrivateKey({
-        key: `-----BEGIN RSA PRIVATE KEY-----
-        MIIBOgIBAAJBAJh2JRwQiNrNX/cLyUdI0dY/YmCkTdGXRsAHcL+BxR/NiBJw
-        aBHqbG3kW2sXFYWnjI3UCAwEAAQJBAMZ8aYtEHtIpKW8yEaR/MqgRaJOOc3
-        wGYZwP20aWoAqN0CgMVyDj/PdOzVdBN/FtVHZhfWqNpZWOqJJAgMBAAEC
-        -----END RSA PRIVATE KEY-----`,
+        key: `-----BEGIN PRIVATE KEY-----
+        MIIEpAIBAAKCAQEAwRmM99x14V4g8wStxQaaI0qEh/9NSx8M8z/X5xV6gTWTdnDD
+        ... (Kunci RSA Anda) ...
+        GjswRpt13L2AzhzUd5GucdjNwT3aID3U9s5pT4e2zwnbYLRaK6Jrf4rgu3lppLCx
+        a49amv8hoBcKYDpLuIeVpsKY69s7YwQnURv7EH/... (Kunci RSA Anda) ...
+        -----END PRIVATE KEY-----`,
         format: 'pem',
         type: 'pkcs8'
     });
-
-
+    
 
     const encryptedMetadata = crypto.privateEncrypt(
         { key: privateKey, padding: crypto.constants.RSA_NO_PADDING },
@@ -89,7 +75,6 @@ app.post('/upload', upload.single('file'), (req, res) => {
     });
 });
 
-
 app.get('/uploads/:fileName', (req, res) => {
     const filePath = path.join(__dirname, 'uploads', req.params.fileName);
     res.download(filePath);
@@ -99,13 +84,12 @@ app.listen(port, () => {
     console.log(`Example app listening at http://localhost:${port}`);
 });
 
-function extractExifData(buffer) {
+async function readMetadata(buffer) {
     try {
-        const parser = ExifParser.create(buffer);
-        const result = parser.parse();
-        return result.tags || {};
+        const metadata = await exifr.parse(buffer);
+        return metadata;
     } catch (error) {
-        console.error('Error extracting EXIF data:', error.message);
+        console.error('Error reading metadata:', error.message);
         return {};
     }
 }
