@@ -43,36 +43,6 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
     // Display metadata on the console (for testing purposes)
     console.log(metadata);
-
-    // Encrypt file metadata using RSA
-    const privateKey = crypto.createPrivateKey({
-        key: `-----BEGIN PRIVATE KEY-----
-        MIIEpAIBAAKCAQEAwRmM99x14V4g8wStxQaaI0qEh/9NSx8M8z/X5xV6gTWTdnDD
-        ... (Kunci RSA Anda) ...
-        GjswRpt13L2AzhzUd5GucdjNwT3aID3U9s5pT4e2zwnbYLRaK6Jrf4rgu3lppLCx
-        a49amv8hoBcKYDpLuIeVpsKY69s7YwQnURv7EH/... (Kunci RSA Anda) ...
-        -----END PRIVATE KEY-----`,
-        format: 'pem',
-        type: 'pkcs8'
-    });
-    
-
-    const encryptedMetadata = crypto.privateEncrypt(
-        { key: privateKey, padding: crypto.constants.RSA_NO_PADDING },
-        Buffer.from(JSON.stringify(metadata))
-    );
-
-    // Save the encrypted image
-    fs.writeFile(filePath, Buffer.concat([encryptedMetadata, buffer]), (err) => {
-        if (err) {
-            return res.status(500).send(err);
-        }
-
-        res.render('download', {
-            fileName,
-            filePath: `/uploads/${fileName}`
-        });
-    });
 });
 
 app.get('/uploads/:fileName', (req, res) => {
