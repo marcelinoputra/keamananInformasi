@@ -6,9 +6,6 @@ import path from 'path';
 import multer from 'multer';
 import exifr from 'exifr';
 
-const __filename = new URL(import.meta.url).pathname;
-const __dirname = path.dirname(__filename);
-
 const app = express();
 const port = 3000;
 
@@ -18,8 +15,18 @@ app.use(bodyParser.json());
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
 
-// Setup Multer
-const storage = multer.memoryStorage();
+// Konfigurasi multer untuk menyimpan file di folder 'uploads'
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+        const extname = path.extname(file.originalname);
+        const timestamp = Date.now();
+        cb(null, `${timestamp}${extname}`);
+    },
+});
+
 const upload = multer({ storage: storage });
 
 app.get('/', (req, res) => {
@@ -32,22 +39,18 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     }
 
     const file = req.file;
-    const fileName = `${path.parse(file.originalname).name}.encrypted`;
-    const filePath = path.join(__dirname, 'uploads', fileName);
 
     // Read file buffer
-    const buffer = Buffer.from(file.buffer);
+    const buffer = await fs.promises.readFile(file.path);
 
     // Read metadata using exifr
     const metadata = await readMetadata(buffer);
 
     // Display metadata on the console (for testing purposes)
     console.log(metadata);
-});
 
-app.get('/uploads/:fileName', (req, res) => {
-    const filePath = path.join(__dirname, 'uploads', req.params.fileName);
-    res.download(filePath);
+    // Send a response to the client
+    res.send('File uploaded successfully!');
 });
 
 app.listen(port, () => {
