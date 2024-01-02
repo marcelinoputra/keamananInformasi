@@ -49,7 +49,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     // Encrypt metadata
     const key = req.body.key; // Symmetric key from user input
     const encryptedMetadata = encryptMetadata(metadata, key);
-
+    console.log(metadata)
     // Display encrypted metadata on the console (for testing purposes)
     console.log('Encrypted Metadata:', encryptedMetadata);
 
