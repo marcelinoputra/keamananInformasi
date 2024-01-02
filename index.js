@@ -46,8 +46,18 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     // Read metadata using exifr
     const metadata = await readMetadata(buffer);
 
-    // Display metadata on the console (for testing purposes)
-    console.log(metadata);
+    // Encrypt metadata
+    const key = req.body.key; // Symmetric key from user input
+    const encryptedMetadata = encryptMetadata(metadata, key);
+
+    // Display encrypted metadata on the console (for testing purposes)
+    console.log('Encrypted Metadata:', encryptedMetadata);
+
+    // Decrypt metadata
+    const decryptedMetadata = decryptMetadata(encryptedMetadata, key);
+
+    // Display decrypted metadata on the console (for testing purposes)
+    console.log('Decrypted Metadata:', decryptedMetadata);
 
     // Send a response to the client
     res.send('File uploaded successfully!');
@@ -65,4 +75,18 @@ async function readMetadata(buffer) {
         console.error('Error reading metadata:', error.message);
         return {};
     }
+}
+
+function encryptMetadata(metadata, key) {
+    const cipher = crypto.createCipher('aes-256-cbc', key);
+    let encryptedMetadata = cipher.update(JSON.stringify(metadata), 'utf-8', 'hex');
+    encryptedMetadata += cipher.final('hex');
+    return encryptedMetadata;
+}
+
+function decryptMetadata(encryptedMetadata, key) {
+    const decipher = crypto.createDecipher('aes-256-cbc', key);
+    let decryptedMetadata = decipher.update(encryptedMetadata, 'hex', 'utf-8');
+    decryptedMetadata += decipher.final('utf-8');
+    return JSON.parse(decryptedMetadata);
 }
