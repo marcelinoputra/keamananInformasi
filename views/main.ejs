@@ -1,21 +1,24 @@
-<!-- index.ejs -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Upload and Encryption</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Main Page</title>
 </head>
 <body>
-    <h1>File Upload and Encryption</h1>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" accept="image/*" required>
+    <h1>Main Page</h1>
+    <form action="/choose" method="post">
+        <label>
+            <input type="radio" name="choice" value="encrypt" required>
+            Encrypt from Photo File
+        </label>
         <br>
-        <label for="key">Symmetric Key:</label>
-        <input type="text" name="key" id="key" required>
+        <label>
+            <input type="radio" name="choice" value="decrypt" required>
+            Decrypt from TXT File
+        </label>
         <br>
-        <button type="submit">Upload and Encrypt</button>
+        <button type="submit">Submit</button>
     </form>
 </body>
 </html>

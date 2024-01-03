@@ -1,0 +1,21 @@
+<!-- index.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload and Encryption</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>File Upload and Encryption</h1>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept="image/*" required>
+        <br>
+        <label for="key">Symmetric Key:</label>
+        <input type="text" name="key" id="key" required>
+        <br>
+        <button type="submit">Upload and Encrypt</button>
+    </form>
+</body>
+</html>

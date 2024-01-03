@@ -39,6 +39,7 @@ const getDirname = (importMetaUrl) => {
 };
 import { fileURLToPath } from "url";
 
+
 app.post("/upload", upload.single("file"), async (req, res) => {
   if (!req.file) {
     return res.status(400).send("No files were uploaded.");
@@ -49,25 +50,39 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
   const filePath = path.join(dirname, "uploads", file.filename);
 
-  // Read file buffer
-  const buffer = await fs.promises.readFile(file.path);
+  try {
+    // Read file buffer
+    const buffer = await fs.promises.readFile(file.path);
 
-  // Read metadata using exifr
-  const metadata = await readMetadata(buffer);
-  // Encrypt metadata
-  const key = req.body.key; // Symmetric key from user input
-  const encryptedMetadata = encryptMetadata(metadata, key);
-  // console.log(metadata);
-  // Display encrypted metadata on the console (for testing purposes)
-  // console.log('Encrypted Metadata:', encryptedMetadata);
+    // Read metadata using exifr
+    const metadata = await exifr.parse(buffer);
 
-  // Update the metadata of the file with encrypted metadata
-  const updatedFilePath = path.join("uploads/", `encrypted_${file.filename}`);
-  await updateFileMetadata(file.path, encryptedMetadata);
+    // Encrypt metadata
+    const key = req.body.key; // Symmetric key from user input
+    const encryptedMetadata = encryptMetadata(metadata, key);
 
-  // Send a response to the client
-  res.send("File uploaded and metadata updated successfully!");
+    // Optionally, you can render the display page after sending the file
+    res.render("display", {
+      metadata: metadata,
+      encryptedText: encryptedMetadata,
+      imageBuffer: buffer.toString("base64"),
+      key: key,
+      filename: file.filename,
+      imageData : buffer,
+    });
+  } catch (error) {
+    console.error("Error processing the uploaded file:", error.message);
+    res.status(500).send("Internal Server Error");
+  } finally {
+    // Clean up: Delete the temporary file
+    await fs.promises.unlink(file.path);
+  }
 });
+
+
+
+
+
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
@@ -100,9 +115,46 @@ function decryptMetadata(encryptedMetadata, key) {
   decryptedMetadata += decipher.final("utf-8");
   return JSON.parse(decryptedMetadata);
 }
-import imageType from 'image-type';
 
-// const imageType = require('image-type');
+app.post('/decrypt', (req, res) => {
+  try {
+    // Extract encrypted content and key from the POST request body
+    const { encryptedContent } = req.body;
+    
+    // Parse the encrypted content into lines
+    const lines = encryptedContent.split('\n');
+    
+    // Find the lines containing Encrypted Metadata and Key
+    const encryptedMetadataLine = lines.find(line => line.startsWith('Encrypted Metadata:'));
+    const keyLine = lines.find(line => line.startsWith('Key:'));
+    
+    if (!encryptedMetadataLine || !keyLine) {
+      throw new Error('Invalid format: Encrypted Metadata or Key not found.');
+    }
+
+    // Extract the actual metadata and key values
+    const encryptedMetadata = encryptedMetadataLine.replace('Encrypted Metadata:', '').trim();
+    const key = keyLine.replace('Key:', '').trim();
+
+    // Ensure the key has the correct length (pad or truncate if necessary)
+    const adjustedKey = key.padEnd(32, ' ');
+
+    // Decrypt the metadata using the adjusted key
+    const decipher = crypto.createDecipher("aes-256-cbc", adjustedKey);
+    let decryptedMetadata = decipher.update(encryptedMetadata, "hex", "utf-8");
+    decryptedMetadata += decipher.final("utf-8");
+
+    // Parse the decrypted metadata
+    const parsedMetadata = JSON.parse(decryptedMetadata);
+
+    // Render the decrypted metadata or perform further actions
+    res.status(200).json({ decryptedMetadata: parsedMetadata });
+  } catch (error) {
+    console.error('Error decrypting metadata:', error.message);
+    res.status(500).send('Error decrypting metadata. Check the console for details.');
+  }
+});
+
 async function updateFileMetadata(updatedFilePath, encryptedMetadata) {
   try {
     let imageData = fs.readFileSync(updatedFilePath);
@@ -117,7 +169,6 @@ async function updateFileMetadata(updatedFilePath, encryptedMetadata) {
     
           // Update the file path for further processing
           updatedFilePath = newFilePath;
-          
       }
     
       imageData = fs.readFileSync(updatedFilePath);
@@ -126,29 +177,17 @@ async function updateFileMetadata(updatedFilePath, encryptedMetadata) {
     const existingMetadataBeforeRemoval = await readMetadata(imageData);
     console.log("Existing Metadata Before Removal:", existingMetadataBeforeRemoval);
     
-    // Log the image data for debugging
-    // console.log("Image Data:", imageData);
-    
-      // Check image format
+    // Check image format
     const newExif = {
         Make: { encryptedMetadata },
         thumbnail: null,
-      }
-      const newExifStr = piexif.dump(newExif);
-
-   
-    console.log(imageData)
-    
-
+    };
+    const newExifStr = piexif.dump(newExif);
 
     const updatedData = piexif.insert(newExifStr, imageData);
-    console.log("hehe")
-
-    // TODO bukan JPG atau JPEG katanya
-    
 
     fs.writeFileSync(updatedFilePath, updatedData);
-    // Log the updated metadata
+
     const updatedMetadata = await readMetadata(
       fs.readFileSync(updatedFilePath)
     );
@@ -156,14 +195,43 @@ async function updateFileMetadata(updatedFilePath, encryptedMetadata) {
       "Metadata updated successfully. Updated Metadata:",
       updatedMetadata
     );
-
-    console.log("yay");
   } catch (error) {
     console.error("Error updating metadata:", error.message);
   }
 }
+
 function changeFileExtension(filePath, newExtension) {
     const extname = path.extname(filePath);
     const basename = path.basename(filePath, extname);
     return path.join(path.dirname(filePath), `${basename}.${newExtension}`);
+}
+
+
+
+app.get("/", (req, res) => {
+  res.render("main");
+});
+
+app.post("/choose", (req, res) => {
+  const choice = req.body.choice;
+
+  if (choice === "encrypt") {
+    // Redirect to the page for encrypting from photo file
+    res.redirect("/encrypt");
+  } else if (choice === "decrypt") {
+    // Redirect to the page for decrypting from TXT file
+    res.redirect("/decrypt");
+  } else {
+    // Handle invalid choices (optional)
+    res.status(400).send("Invalid choice");
   }
+});
+
+app.get("/encrypt", (req, res) => {
+  res.render("encrypt");
+});
+
+app.get("/decrypt", (req, res) => {
+  res.render("decrypt");
+});
+

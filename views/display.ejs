@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Display Information</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .info-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .metadata-container,
+        .encrypted-text-container,
+        .photo-container {
+            flex: 1;
+            max-width: 400px;
+            text-align: left;
+            width: 100%;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #333;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        a {
+            text-decoration: none;
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .button-container {
+            display: flex;
+            gap: 20px;
+        }
+    </style>
+  
+</head>
+<body>
+    <h1>Photo Metadata Encryption</h1>
+    <h2> Key: <%= key %> </h2>
+    <div class="button-container">
+        <button onclick="window.location.href='/'">Back to Main Page</button>
+        <button onclick="downloadTxt()">Download Encrypted Metadata and Key</button>
+        <button onclick="createImageFromBuffer()">Remove Photo Metadata</button>
+    </div>
+    <div id="imageData" data-image="<%= imageBuffer %>"></div>
+    <div id="filename" data-filename="<%= filename %>"></div>
+    <div class="info-container">
+        <div class="photo-container">
+            <h2>Photo:</h2>
+            <img src="data:image/jpeg;base64, <%= imageBuffer %>" alt="Photo">
+        </div>
+        <div class="metadata-container">
+            <h2>Metadata:</h2>
+            <pre><%= JSON.stringify(metadata, null, 2) %></pre>
+        </div>
+
+        <div class="encrypted-text-container">
+            <h2>Encrypted Metadata:</h2>
+            <p><%= encryptedText %></p>
+        </div>
+    </div>
+
+<!-- ... (your HTML code) ... -->
+
+<!-- ... (your HTML code) ... -->
+<script>
+    function createImageFromBuffer() {
+        // Get base64 data from the dataset attribute
+        const base64Data = document.getElementById('imageData').dataset.image;
+    
+        // Convert the base64 string to a Uint8Array
+        const byteArray = new Uint8Array(atob(base64Data).split('').map(char => char.charCodeAt(0)));
+    
+        // Create a Blob from the Uint8Array
+        const blob = new Blob([byteArray], { type: 'image/jpeg' });
+    
+        // Create a new image element
+        const img = new Image();
+    
+        // Set the source of the image to the Blob URL
+        img.src = URL.createObjectURL(blob);
+    
+        // Append the image to the document or use it as needed
+        document.body.appendChild(img);
+    
+        // Optionally, you can set other attributes or styles for the image
+        img.alt = 'New Image';
+        img.style.border = '2px solid #333';
+    
+        // Download the image with a specified filename
+        const link = document.createElement('a');
+        link.href = img.src;
+        link.download = 'new_image.jpg';  // Set a default filename if not provided
+        link.click();
+    
+        // Clean up the Blob URL
+        URL.revokeObjectURL(img.src);
+    }
+    
+    function downloadTxt() {
+        const content = `Encrypted Metadata:\n${encodeURIComponent('<%= encryptedText %>')}\n\nKey:\n<%= key %>`;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = 'encrypted_metadata_and_key.txt';
+        link.click();
+    }
+</script>
+
+<!-- ... (your HTML code) ... -->
+
+
+<!-- ... (your HTML code) ... -->
+
+</body>
+</html>
