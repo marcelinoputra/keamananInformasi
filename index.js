@@ -111,49 +111,36 @@ function encryptMetadata(metadata, key) {
 
 function decryptMetadata(encryptedMetadata, key) {
   const decipher = crypto.createDecipher("aes-256-cbc", key);
-  let decryptedMetadata = decipher.update(encryptedMetadata, "hex", "utf-8");
+
+  // Use 'base64' encoding for the update method
+  let decryptedMetadata = decipher.update(encryptedMetadata, "base64", "utf-8");
+
   decryptedMetadata += decipher.final("utf-8");
+
   return JSON.parse(decryptedMetadata);
 }
+
+
 
 app.post('/decrypt', (req, res) => {
   try {
     // Extract encrypted content and key from the POST request body
-    const { encryptedContent } = req.body;
-    
-    // Parse the encrypted content into lines
-    const lines = encryptedContent.split('\n');
-    
-    // Find the lines containing Encrypted Metadata and Key
-    const encryptedMetadataLine = lines.find(line => line.startsWith('Encrypted Metadata:'));
-    const keyLine = lines.find(line => line.startsWith('Key:'));
-    
-    if (!encryptedMetadataLine || !keyLine) {
-      throw new Error('Invalid format: Encrypted Metadata or Key not found.');
-    }
-
-    // Extract the actual metadata and key values
-    const encryptedMetadata = encryptedMetadataLine.replace('Encrypted Metadata:', '').trim();
-    const key = keyLine.replace('Key:', '').trim();
-
-    // Ensure the key has the correct length (pad or truncate if necessary)
-    const adjustedKey = key.padEnd(32, ' ');
-
-    // Decrypt the metadata using the adjusted key
-    const decipher = crypto.createDecipher("aes-256-cbc", adjustedKey);
-    let decryptedMetadata = decipher.update(encryptedMetadata, "hex", "utf-8");
-    decryptedMetadata += decipher.final("utf-8");
-
-    // Parse the decrypted metadata
-    const parsedMetadata = JSON.parse(decryptedMetadata);
+    const { encryptedContent, key } = req.body;
+    // Decrypt the metadata using the provided function
+    const decryptedMetadata = decryptMetadata(encryptedContent, key);
 
     // Render the decrypted metadata or perform further actions
-    res.status(200).json({ decryptedMetadata: parsedMetadata });
+    res.status(200).json({ decryptedMetadata });
+
+
+
   } catch (error) {
     console.error('Error decrypting metadata:', error.message);
     res.status(500).send('Error decrypting metadata. Check the console for details.');
   }
 });
+
+
 
 async function updateFileMetadata(updatedFilePath, encryptedMetadata) {
   try {
