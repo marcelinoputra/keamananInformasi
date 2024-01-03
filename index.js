@@ -56,6 +56,20 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
     // Read metadata using exifr
     const metadata = await exifr.parse(buffer);
+    const exifData = await readMetadataUsingPiexifjs(buffer);
+
+    // Empty metadata
+    const emptyExifData = { "0th": {}, "Exif": {}, "GPS": {} };
+
+    // Insert empty metadata into the image
+    const newExifData = piexif.insert(piexif.dump(emptyExifData), buffer.toString("binary"));
+    const newJpeg = Buffer.from(newExifData, "binary");
+
+    // Write the modified file
+    fs.writeFileSync(filePath, newJpeg);
+
+    // Create a download link for the user
+    const downloadLink = `/download/${file.filename}`;
 
     // Encrypt metadata
     const key = req.body.key; // Symmetric key from user input
@@ -69,17 +83,34 @@ app.post("/upload", upload.single("file"), async (req, res) => {
       key: key,
       filename: file.filename,
       imageData : buffer,
+      downloadLink: downloadLink,
     });
   } catch (error) {
     console.error("Error processing the uploaded file:", error.message);
     res.status(500).send("Internal Server Error");
-  } finally {
-    // Clean up: Delete the temporary file
-    await fs.promises.unlink(file.path);
   }
+  // } finally {
+  //   // Clean up: Delete the temporary file
+  //   await fs.promises.unlink(file.path);
+  // }
 });
 
+app.get("/download/:filename", (req, res) => {
+  const filename = req.params.filename;
+  const dirname = getDirname(import.meta.url);
+  const filepath = path.join(dirname, "uploads", filename);
 
+  if (fs.existsSync(filepath)) {
+    res.download(filepath, (err) => {
+      if (err) {
+        console.error("Error downloading file:", err.message);
+        res.status(500).send("Internal Server Error");
+      }
+    });
+  } else {
+    res.status(404).send("File not found");
+  }
+});
 
 
 
@@ -95,6 +126,16 @@ async function readMetadata(buffer) {
   } catch (error) {
     console.error("Error reading metadata:", error.message);
     return {};
+  }
+}
+
+async function readMetadataUsingPiexifjs(buffer) {
+  try {
+      const metadata = await piexif.load(buffer.toString("binary"));
+      return metadata || {};
+  } catch (error) {
+      console.error('Error reading metadata:', error.message);
+      return {};
   }
 }
 
