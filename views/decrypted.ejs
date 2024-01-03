@@ -1,0 +1,106 @@
+<!-- decrypted.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Display Information</title>
+    <style>
+        /* style.css */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #007bff;
+        }
+
+        form {
+            display: inline-block;
+            text-align: left;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        input {
+            margin-bottom: 15px;
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .metadata-container {
+            white-space: pre-line;
+            text-align: left;
+        }
+
+        .content-dekrip {
+            max-width: 600px; /* Set a maximum width for the container */
+            margin: 0 auto;  /* Center the container horizontally */
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        #judul {
+            text-align: center;
+        }
+    </style>
+
+</head>
+<body>
+    <h1>Photo Metadata Decryption</h1>
+
+    <div class="button-container">
+        <button onclick="window.location.href='/';">Back to Main Page</button>
+        <button onclick="downloadMetadata()">Download Metadata</button>
+    </div>
+
+    <div class="info-container">
+        <div class="metadata-container">
+            <h1 id="judul">Decrypted Metadata</h1>
+            <div class="content-dekrip">
+                <p><%= JSON.stringify(decryptedMetadata, null, 2).replace(/, /g, ',\n') %></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function downloadMetadata() {
+            const content = `Decrypted Metadata:\n${encodeURIComponent('<%= JSON.stringify(decryptedMetadata, null, 2)%>')}`;
+            const blob = new Blob([content], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = 'Decrypted_metadata_and_key.txt';
+            link.click();
+        }
+    </script>
+
+</body>
+</html>
+
+
+decrypted.ejs

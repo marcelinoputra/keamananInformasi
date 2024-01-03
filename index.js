@@ -112,8 +112,58 @@ app.get("/download/:filename", (req, res) => {
   }
 });
 
+function decryptMetadata(encryptedMetadata, key) {
+  try {
+    const decipher = crypto.createDecipher("aes-256-cbc", key);
 
+    // Use 'base64' encoding for the update method
+    let decryptedMetadata = decipher.update(encryptedMetadata, "hex", "utf-8");
 
+    decryptedMetadata += decipher.final("utf-8");
+
+    return JSON.parse(decryptedMetadata);
+  } catch (error) {
+    console.error('Error during decryption:', error.message);
+    return null;
+  }
+}
+
+app.post('/decrypt', (req, res) => {
+  try {
+    // Extract encrypted content and key from the POST request body
+    const { encryptedContent, key } = req.body;
+
+    // Check if both encrypted content and key are provided
+    if (!encryptedContent || !key) {
+      return res.status(400).json({ error: 'Both encryptedContent and key are required.' });
+    }
+
+    // Decrypt the metadata using the provided function
+    const decryptedMetadata = decryptMetadata(encryptedContent, key);
+
+    // Render the decrypted metadata on the 'decrypted.ejs' template
+    res.render('decrypted', { decryptedMetadata });
+
+  } catch (error) {
+    console.error('Error decrypting metadata:', error.message);
+    res.status(500).send('Error decrypting metadata. Check the console for details.');
+  }
+});
+  
+app.post("/decrypt", (req, res) => {
+  const { encryptedContent, key } = req.body;
+  res.redirect(`/decrypted?encryptedContent=${encodeURIComponent(encryptedContent)}&key=${encodeURIComponent(key)}`);
+});
+app.get("/decrypted", (req, res) => {
+  const encryptedContent = req.query.encryptedContent;
+  const key = req.query.key;
+
+  // Decrypt the metadata using the provided function
+  const decryptedMetadata = decryptMetadata(encryptedContent, key);
+
+  // Render the 'decrypted.ejs' template with decrypted metadata and key
+  res.render("decrypted", { decryptedMetadata, key });
+});
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
@@ -150,36 +200,10 @@ function encryptMetadata(metadata, key) {
   return encryptedMetadata;
 }
 
-function decryptMetadata(encryptedMetadata, key) {
-  const decipher = crypto.createDecipher("aes-256-cbc", key);
-
-  // Use 'base64' encoding for the update method
-  let decryptedMetadata = decipher.update(encryptedMetadata, "base64", "utf-8");
-
-  decryptedMetadata += decipher.final("utf-8");
-
-  return JSON.parse(decryptedMetadata);
-}
 
 
 
-app.post('/decrypt', (req, res) => {
-  try {
-    // Extract encrypted content and key from the POST request body
-    const { encryptedContent, key } = req.body;
-    // Decrypt the metadata using the provided function
-    const decryptedMetadata = decryptMetadata(encryptedContent, key);
 
-    // Render the decrypted metadata or perform further actions
-    res.status(200).json({ decryptedMetadata });
-
-
-
-  } catch (error) {
-    console.error('Error decrypting metadata:', error.message);
-    res.status(500).send('Error decrypting metadata. Check the console for details.');
-  }
-});
 
 
 
